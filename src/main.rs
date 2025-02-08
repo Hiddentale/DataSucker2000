@@ -9,7 +9,6 @@ enum BencodeError {
     InvalidFormat
 }
 
-
 fn find_colon(encoded_value: &str) {
 
 }
@@ -24,7 +23,12 @@ fn decode_bencoded_value(encoded_value: &str) -> serde_json::Value {
         'i' => decode_integer(),
         'l' => decode_list(),
         'd' => decode_dictionary()
+        invalid_character => {
+            eprintln("Invalid initial character: {}", invalid_character)
+            Err(BencodeError::InvalidFormat);
+        }
     }
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
