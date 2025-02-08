@@ -9,12 +9,22 @@ enum BencodeError {
     InvalidFormat
 }
 
-fn find_colon(encoded_value: &str) {
-
+fn decode_string(encoded_value: &str) -> Return(serde_json::Value, BencodeError) {
+    let colon_index = encoded_value.find(':').ok_or(BencodeError::MissingColon)?;
+    let number = encoded_value[..colon_index].parse::<i64>().map_err(|_| BencodeError::InvalidLength)?;
+    let end_index = colon_index + 1 + number as usize;
+    if end_index > encoded_value.len(){
+        return Err(BencodeError::InvalidLength);
+    }
+    let string = &encoded_value[colon_index + 1..end_index];
+    return Ok(serde_json::Value::String(string.to_string()));
 }
 
-#[allow(dead_code)]
-fn decode_bencoded_value(encoded_value: &str) -> serde_json::Value {
+fn decode_integer() {}
+fn decode_list() {}
+fn decode_dictionary() {}
+
+fn decode_bencoded_value(encoded_value: &str) -> Return(serde_json::Value, BencodeError) {
     if encoded_value.is_empty() {
         return Err(BencodeError::EmptyInput);
     }
