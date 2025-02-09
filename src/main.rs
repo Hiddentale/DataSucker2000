@@ -1,12 +1,23 @@
 use serde_json;
 use std::env;
-
+use std::fmt;
 
 enum BencodeError {
     EmptyInput,
     MissingColon,
     InvalidLength,
     InvalidFormat
+}
+
+impl fmt::Display for BencodeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            BencodeError::EmptyInput => write!(f, "Input string is empty"),
+            BencodeError::MissingColon => write!(f, "Expected colon in string format"),
+            BencodeError::InvalidLength => write!(f, "Invalid length in string format"),
+            BencodeError::InvalidFormat => write!(f, "Invalid bencode format"),
+        }
+    }
 }
 
 fn decode_string(encoded_value: &str) -> Result<serde_json::Value, BencodeError> {
@@ -21,15 +32,20 @@ fn decode_string(encoded_value: &str) -> Result<serde_json::Value, BencodeError>
 }
 
 fn decode_integer(encoded_value: &str) -> Result<serde_json::Value, BencodeError> {
-    if encoded_value.chars().last() != 'e' {
+    if encoded_value.chars().last() != Some('e') {
         return Err(BencodeError::InvalidFormat);
     }
-    let integer = &encoded_value[1..encoded_value.len() - 1].parse::<i64>().map_err(|_| BencodeError::InvalidLength)?;
-    return Ok(serde_json::Value::Number(integer));
+    let integer_in_string_format = &encoded_value[1..encoded_value.len() - 1];
+    let integer = integer_in_string_format.parse::<i64>().map_err(|_| BencodeError::InvalidFormat)?;
+    return Ok(serde_json::Value::Number(integer.into()));
 }
 
-fn decode_list(encoded_value: &str) -> Result<serde_json::Value, BencodeError> {}
-fn decode_dictionary(encoded_value: &str) -> Result<serde_json::Value, BencodeError> {}
+fn decode_list(_encoded_value: &str) -> Result<serde_json::Value, BencodeError> {
+    unimplemented!("List decoding has not been implemented yet!");
+}
+fn decode_dictionary(_encoded_value: &str) -> Result<serde_json::Value, BencodeError> {
+    unimplemented!("Dictionary decoding has not been implemented yet!");
+}
 
 fn decode_bencoded_value(encoded_value: &str) -> Result<serde_json::Value, BencodeError> {
     if encoded_value.is_empty() {
@@ -39,10 +55,10 @@ fn decode_bencoded_value(encoded_value: &str) -> Result<serde_json::Value, Benco
         '0'..='9' => decode_string(encoded_value),
         'i' => decode_integer(encoded_value),
         'l' => decode_list(encoded_value),
-        'd' => decode_dictionary(encoded_value)
+        'd' => decode_dictionary(encoded_value),
         invalid_character => {
-            eprintln("Invalid initial character: {}", invalid_character)
-            Err(BencodeError::InvalidFormat);
+            eprintln!("Invalid initial character: {}", invalid_character);
+            return Err(BencodeError::InvalidFormat);
         }
     }
 }
@@ -52,11 +68,13 @@ fn main() {
     let command = &args[1];
 
     if command == "decode" {
-        eprintln!("Logs");
-
         let encoded_value = &args[2];
         let decoded_value = decode_bencoded_value(encoded_value);
-        println!("{}", decoded_value.to_string());
+        match decoded_value {
+            Ok(value) => println!("{}", value.to_string()),
+            Err(error) => eprintln!("Error: {}", error)
+        }
+        
     } else {
         println!("unknown command: {}", args[1])
     }
